@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FoodRescue Engine | Smart Shelf-Life & Redistribution Portal</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- Top Navigation Header -->
+  <nav class="navbar">
+    <div class="brand">
+      <div class="brand-logo">FR</div>
+      <div>
+        <h1>FoodRescue Engine</h1>
+        <span>Smart Shelf-Life &amp; Surplus Redistribution Portal</span>
+      </div>
+    </div>
+
+    <div class="nav-tabs">
+      <button class="nav-btn active" onclick="switchView('dashboard', this)">Live Queue</button>
+      <button class="nav-btn" onclick="switchView('shelters', this)">Shelters</button>
+      <button class="nav-btn" onclick="switchView('donors', this)">Donors</button>
+      <button class="nav-btn" onclick="switchView('drivers', this)">Drivers</button>
+      <button class="nav-btn" onclick="switchView('analytics', this)">SDG Analytics</button>
+      <button class="nav-btn" onclick="switchView('history', this)">History</button>
+      <button class="btn-cta" onclick="openModal()">+ Log Surplus Food</button>
+    </div>
+  </nav>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="toast">Action completed</div>
+
+  <main class="main-container">
+    <!-- KPI Overview Strip -->
+    <section class="kpi-strip">
+      <div class="kpi-box">
+        <span class="kpi-title">Active Surplus Inventory</span>
+        <div class="kpi-value" id="kpiActiveKg">0 kg</div>
+        <span class="kpi-sub" id="kpiActiveBatches">0 active batches</span>
+      </div>
+      <div class="kpi-box urgent-card">
+        <span class="kpi-title">Urgent / Critical (&le; 6 Hrs)</span>
+        <div class="kpi-value text-red" id="kpiCriticalCount">0</div>
+        <span class="kpi-sub">Requires immediate FIFO pickup</span>
+      </div>
+      <div class="kpi-box success-card">
+        <span class="kpi-title">Rescued &amp; Dispatched</span>
+        <div class="kpi-value text-green" id="kpiDispatchedKg">0 kg</div>
+        <span class="kpi-sub" id="kpiDispatchedCount">0 deliveries completed</span>
+      </div>
+      <div class="kpi-box">
+        <span class="kpi-title">Cold-Shelf Utilization</span>
+        <div class="kpi-value" id="kpiColdLoad">0%</div>
+        <span class="kpi-sub" id="kpiColdText">0 / 500 kg capacity used</span>
+      </div>
+    </section>
+
+    <!-- PAGE 1: LIVE FIFO QUEUE -->
+    <section id="view-dashboard" class="view-section active">
+      <div class="toolbar">
+        <div class="filter-group">
+          <button class="filter-btn active" onclick="setFilter('ALL', this)">All Active</button>
+          <button class="filter-btn" onclick="setFilter('CRITICAL', this)">Critical (&le;2h)</button>
+          <button class="filter-btn" onclick="setFilter('URGENT', this)">Urgent (&le;6h)</button>
+          <button class="filter-btn" onclick="setFilter('FRESH', this)">Fresh (&gt;6h)</button>
+        </div>
+
+        <div class="search-group">
+          <input type="text" id="searchInput" placeholder="Search meal, donor, or shelter..." oninput="renderViews()" />
+          <button class="btn-secondary" onclick="loadDonations()">Refresh Timer</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <h2>Prioritized FIFO Redistribution Queue</h2>
+          <span class="live-pill"><span class="dot"></span> Live Time-Decay Active</span>
+        </div>
+
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Priority Rank</th>
+                <th>Meal &amp; Storage</th>
+                <th>Donor Source</th>
+                <th>Assigned Shelter</th>
+                <th>Quantity</th>
+                <th>Shelf-Life Window</th>
+                <th>Urgency</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="activeQueueBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- PAGE 2: PARTNER SHELTERS & COLD-SHELF CAPACITY -->
+    <section id="view-shelters" class="view-section">
+      <div class="panel">
+        <div class="panel-header">
+          <h2>Partner Community Kitchens &amp; Cold-Shelf Capacity</h2>
+          <button class="btn-cta" onclick="openModal()">+ Assign New Batch</button>
+        </div>
+        <div class="shelter-grid" id="shelterGrid"></div>
+      </div>
+    </section>
+
+    <!-- PAGE 3: COMMERCIAL DONOR DIRECTORY -->
+    <section id="view-donors" class="view-section">
+      <div class="panel">
+        <div class="panel-header">
+          <h2>Registered Commercial Food Donors &amp; Contribution Ledger</h2>
+          <button class="btn-cta" onclick="openModal()">+ Log Donor Contribution</button>
+        </div>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Donor Organization</th>
+                <th>Category</th>
+                <th>Active Batches</th>
+                <th>Total Food Rescued (kg)</th>
+                <th>Compliance Status</th>
+              </tr>
+            </thead>
+            <tbody id="donorDirectoryBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- PAGE 4: VOLUNTEER DRIVERS & PICKUP DISPATCH -->
+    <section id="view-drivers" class="view-section">
+      <div class="panel">
+        <div class="panel-header">
+          <h2>Volunteer Fleet &amp; Active FIFO Pickup Assignments</h2>
+          <span class="live-pill"><span class="dot"></span> 3 Cold-Chain Vans Active</span>
+        </div>
+        <div class="shelter-grid" id="driverGrid"></div>
+      </div>
+    </section>
+
+    <!-- PAGE 5: UN SDG IMPACT ANALYTICS -->
+    <section id="view-analytics" class="view-section">
+      <div class="panel">
+        <div class="panel-header">
+          <h2>Real-Time UN SDG 2 &amp; SDG 12 Impact Metrics</h2>
+          <span class="kpi-sub">Calculated dynamically from live MongoDB batch logs</span>
+        </div>
+        <div class="shelter-grid" id="sdgMetricsGrid"></div>
+      </div>
+    </section>
+
+    <!-- PAGE 6: DISPATCH HISTORY -->
+    <section id="view-history" class="view-section">
+      <div class="panel">
+        <div class="panel-header">
+          <h2>Completed Redistribution Log</h2>
+          <span class="kpi-sub">Verified safe deliveries prior to expiry</span>
+        </div>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Meal Item</th>
+                <th>Donor Facility</th>
+                <th>Destination Shelter</th>
+                <th>Quantity</th>
+                <th>Storage Type</th>
+                <th>Status</th>
+                <th>Manage</th>
+              </tr>
+            </thead>
+            <tbody id="historyBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- MODAL: LOG SURPLUS MEAL BATCH -->
+  <div id="donationModal" class="modal-backdrop">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Register Surplus Food Batch</h3>
+        <button class="close-btn" onclick="closeModal()">&times;</button>
+      </div>
+      <form id="donationForm">
+        <div class="form-group">
+          <label>Meal / Food Description</label>
+          <input type="text" id="mealName" placeholder="e.g., Dal Tadka, Jeera Rice &amp; Roti" required />
+        </div>
+
+        <div class="form-group">
+          <label>Donor Organization / Kitchen</label>
+          <input type="text" id="donorName" placeholder="e.g., Grand Banquet Caterers" required />
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Quantity (kg)</label>
+            <input type="number" id="quantityKg" min="1" step="0.5" placeholder="25" required />
+          </div>
+          <div class="form-group">
+            <label>Edible Shelf-Life (Hours)</label>
+            <input type="number" id="shelfLifeHours" min="1" max="48" placeholder="6" required />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Storage Requirement</label>
+            <select id="storageType">
+              <option value="Refrigerated">Refrigerated (2°C – 5°C)</option>
+              <option value="Hot-Hold">Hot-Hold (&gt; 60°C)</option>
+              <option value="Ambient">Ambient / Dry Shelf</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Target Community Shelter</label>
+            <select id="targetShelter">
+              <option value="Sector-14 Soup Kitchen">Sector-14 Soup Kitchen</option>
+              <option value="Hope Community Shelter">Hope Community Shelter</option>
+              <option value="City Night Refuge">City Night Refuge</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" onclick="closeModal()">Cancel</button>
+          <button type="submit" class="btn-cta">Register &amp; Add to Queue</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
